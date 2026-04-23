@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockFlow | Controle de Recebimento</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; background-color: #d1d5db; color: #1e293b; font-size: 13px; }
+        .winthor-header { background: linear-gradient(to bottom, #1e3a8a, #172554); border-bottom: 2px solid #fbbf24; }
+        .winthor-card { background: white; border: 1px solid #94a3b8; border-radius: 0px; box-shadow: 1px 1px 0px rgba(0,0,0,0.1); }
+        .winthor-table-header { background-color: #334155; color: white; font-weight: bold; text-transform: uppercase; font-size: 11px; padding: 6px 10px; }
+        .btn-winthor { background: #f8fafc; border: 1px solid #475569; padding: 4px 12px; font-weight: bold; text-transform: uppercase; font-size: 11px; cursor: pointer; }
+        .btn-primary-win { background: #1e3a8a; color: white; border: 1px solid #172554; }
+        .tab-active { background-color: rgba(255, 255, 255, 0.2); border-bottom: 3px solid #fbbf24; }
+        .hidden { display: none !important; }
+        input { border: 1px solid #94a3b8 !important; padding: 4px 8px !important; }
+    </style>
+</head>
+<body>
+
+    <header class="winthor-header text-white p-3 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-4">
+            <span class="font-black tracking-tighter text-lg italic">STOCKFLOW <span class="font-light text-xs opacity-70 not-italic">| PRO</span></span>
+            <div id="nav-abas" class="hidden flex gap-0.5 ml-6">
+                <button onclick="switchTab('Dash')" id="btnAbaDash" class="tab-active px-5 py-2 font-bold text-[11px] uppercase">Dashboard</button>
+                <button onclick="switchTab('Conferencia')" id="btnAbaConferencia" class="hover:bg-white/10 px-5 py-2 font-bold text-[11px] uppercase">Conferência</button>
+                <button onclick="switchTab('Fiscal')" id="btnAbaFiscal" class="hover:bg-white/10 px-5 py-2 font-bold text-[11px] uppercase">Fiscal</button>
+                <button onclick="switchTab('Logs')" id="btnAbaLogs" class="hidden hover:bg-white/10 px-5 py-2 font-bold text-[11px] uppercase">Logs</button>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <span id="user-display" class="text-[10px] font-bold uppercase border-r pr-4 border-white/20"></span>
+            <button id="btnLogout" class="bg-rose-800 px-3 py-1 text-[10px] font-bold uppercase">Sair</button>
+        </div>
+    </header>
+
+    <div id="auth-screen" class="fixed inset-0 bg-slate-200 flex items-center justify-center z-[300]">
+        <div class="winthor-card p-10 w-96 space-y-6 text-center">
+            <h1 class="text-2xl font-black text-blue-900 uppercase">Login</h1>
+            <input type="email" id="login-email" placeholder="E-mail" class="w-full">
+            <input type="password" id="login-pass" placeholder="Senha" class="w-full">
+            <button id="btnLogin" class="w-full btn-primary-win py-3 font-black uppercase text-xs">Entrar</button>
+        </div>
+    </div>
+
+    <main id="app-content" class="hidden p-4 space-y-4">
+        
+        <section id="aba-dash" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div class="winthor-card p-4 border-l-4 border-l-blue-800">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">Itens em Estoque</p>
+                    <div id="kpi-total-itens" class="text-3xl font-black">0</div>
+                </div>
+                <div class="winthor-card p-4 border-l-4 border-l-amber-600">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">Na Conferência</p>
+                    <div id="kpi-pendentes" class="text-3xl font-black">0</div>
+                </div>
+                <div class="winthor-card p-4 border-l-4 border-l-rose-700">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">Bloqueados Auditoria</p>
+                    <div id="kpi-divergencias" class="text-3xl font-black">0</div>
+                </div>
+            </div>
+            <div id="grid-estoque-fornecedor" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+        </section>
+
+        <section id="aba-conferencia" class="hidden space-y-4">
+            <div id="box-import-xml" class="hidden winthor-card p-4 flex justify-between items-center bg-slate-50 border-dashed border-2">
+                <span class="font-bold uppercase text-xs">Importar Nova NF-e (.xml)</span>
+                <input type="file" id="xml-input" accept=".xml" class="hidden">
+                <button onclick="document.getElementById('xml-input').click()" class="btn-primary-win px-6 py-2 uppercase font-bold text-xs">Processar Arquivo</button>
+            </div>
+            <div id="list-conferencia" class="space-y-4"></div>
+        </section>
+
+        <section id="aba-fiscal" class="hidden space-y-2">
+            <div class="winthor-card overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="winthor-table-header">
+                        <tr>
+                            <th class="p-2">Lote</th>
+                            <th class="p-2">Fornecedor</th>
+                            <th class="p-2">Produto</th>
+                            <th class="p-2">Tentativas</th>
+                            <th class="p-2">Status</th>
+                            <th class="p-2 text-center">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="list-fiscal-body" class="text-[11px] uppercase"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="aba-logs" class="hidden winthor-card p-0 overflow-hidden">
+            <div class="winthor-table-header bg-slate-800">Monitor de Sistema</div>
+            <div id="list-logs" class="bg-[#0f172a] text-emerald-400 font-mono text-[11px] p-5 h-[500px] overflow-y-auto"></div>
+        </section>
+    </main>
+
+    <div id="modal-conferencia" class="fixed inset-0 bg-black/60 z-[400] hidden flex items-center justify-center p-4">
+        <div class="winthor-card w-full max-w-sm p-0 overflow-hidden">
+            <div class="winthor-table-header p-3">Conferência de Item</div>
+            <div class="p-6 space-y-5">
+                <h2 id="modal-prod-nome" class="text-sm font-black uppercase text-slate-800"></h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500">QTD. CONTADA</label>
+                        <input type="number" id="input-qtd" class="w-full text-xl font-black text-center">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500">VENCIMENTO</label>
+                        <input type="date" id="input-validade" class="w-full text-xs">
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-4 border-t">
+                    <button onclick="fecharModal()" class="flex-1 btn-winthor py-2">Sair</button>
+                    <button id="btnConfirmar" class="flex-1 btn-primary-win py-2 font-black">GRAVAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBwR777V1L9W59tehN5JCOsWalep576u0U",
+            authDomain: "stockflow-40cec.firebaseapp.com",
+            projectId: "stockflow-40cec",
+            storageBucket: "stockflow-40cec.firebasestorage.app",
+            messagingSenderId: "445150768122",
+            appId: "1:445150768122:web:e1ddd8b02c994c461c9243"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        let currentUserRole = "user";
+
+        // MONITORES GLOBAIS (FORA DE FUNÇÕES PARA RODAR SEMPRE)
+        const monitorarRecebimentos = () => {
+            onSnapshot(query(collection(db, "recebimentos"), orderBy("data", "desc")), (snap) => {
+                const listConf = document.getElementById('list-conferencia');
+                const listFiscal = document.getElementById('list-fiscal-body');
+                listConf.innerHTML = ""; listFiscal.innerHTML = "";
+                let pend = 0; let div = 0;
+
+                snap.forEach(d => {
+                    const i = d.data();
+                    const id = d.id;
+
+                    // LÓGICA DE EXIBIÇÃO PARA CONFERENTE (ATÉ 2 TENTATIVAS)
+                    if (i.status !== "SUCESSO" && i.status !== "BLOQUEADO_AUDITORIA" && i.tentativas < 2) {
+                        const emRecontagem = i.tentativas === 1;
+                        listConf.innerHTML += `
+                        <div class="winthor-card overflow-hidden ${emRecontagem ? 'border-l-4 border-l-amber-500' : ''}">
+                            <div class="winthor-table-header ${emRecontagem ? 'bg-amber-700' : 'bg-slate-600'} flex justify-between">
+                                <span>NF: ${i.nf} | ${i.fornecedor} ${emRecontagem ? '(RECONTAGEM)' : ''}</span>
+                                <span>LOTE: ${i.lote}</span>
+                            </div>
+                            <div class="p-3 flex justify-between items-center">
+                                <div>
+                                    <span class="font-black text-[11px] uppercase">${i.produto}</span>
+                                    ${emRecontagem ? `<span class="ml-2 bg-amber-100 text-amber-800 px-2 py-0.5 font-bold text-[9px]">ÚLT. QTD: ${i.qtdContada}</span>` : ''}
+                                </div>
+                                <button onclick="abrirModal('${id}','${i.produto}',${i.qtdEsperada},'${i.nf}','${i.fornecedor}')" class="btn-winthor">Conferir</button>
+                            </div>
+                        </div>`;
+                        pend++;
+                    }
+
+                    // TABELA FISCAL
+                    listFiscal.innerHTML += `<tr class="border-b bg-white">
+                        <td class="p-2 border-r font-bold">${i.lote}</td>
+                        <td class="p-2 border-r">${i.fornecedor}</td>
+                        <td class="p-2 border-r">${i.produto}</td>
+                        <td class="p-2 border-r text-center">${i.tentativas}/2</td>
+                        <td class="p-2 border-r font-bold ${i.status==='SUCESSO'?'text-emerald-600':(i.status==='BLOQUEADO_AUDITORIA'?'text-rose-700':'text-slate-500')}">${i.status}</td>
+                        <td class="p-2 text-center">
+                            <button onclick="abrirModal('${id}','${i.produto}',${i.qtdEsperada},'${i.nf}','${i.fornecedor}')" class="btn-winthor ${currentUserRole==='admin'?'':'hidden'}">AUDITAR</button>
+                        </td>
+                    </tr>`;
+                    if(i.status === "BLOQUEADO_AUDITORIA") div++;
+                });
+                document.getElementById('kpi-pendentes').innerText = pend;
+                document.getElementById('kpi-divergencias').innerText = div;
+            });
+        };
+
+        const monitorarEstoque = () => {
+            onSnapshot(collection(db, "estoque_geral"), (snap) => {
+                const container = document.getElementById('grid-estoque-fornecedor');
+                container.innerHTML = ""; let t = 0;
+                snap.forEach(d => {
+                    const i = d.data();
+                    container.innerHTML += `<div class="winthor-card p-2 text-[10px] uppercase flex justify-between"><span>${i.produto}</span><b>${i.saldo} UN</b></div>`;
+                    t++;
+                });
+                document.getElementById('kpi-total-itens').innerText = t;
+            });
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const snap = await getDoc(doc(db, "usuarios", user.uid));
+                if (snap.exists()) currentUserRole = snap.data().role;
+                document.getElementById('user-display').innerText = user.email;
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('app-content').classList.remove('hidden');
+                document.getElementById('nav-abas').classList.remove('hidden');
+                document.getElementById('box-import-xml').classList.toggle('hidden', currentUserRole !== "admin");
+                document.getElementById('btnAbaLogs').classList.toggle('hidden', currentUserRole !== "admin");
+                
+                // INICIA OS MONITORES APÓS LOGIN
+                monitorarRecebimentos();
+                monitorarEstoque();
+                if(currentUserRole === "admin") monitorarLogs();
+            } else {
+                document.getElementById('auth-screen').classList.remove('hidden');
+                document.getElementById('app-content').classList.add('hidden');
+            }
+        });
+
+        document.getElementById('btnLogin').onclick = () => signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pass').value);
+        document.getElementById('btnLogout').onclick = () => signOut(auth);
+
+        async function registrarLog(acao, detalhes) {
+            await addDoc(collection(db, "logs"), { usuario: auth.currentUser.email, acao, detalhes, data: serverTimestamp() });
+        }
+
+        window.switchTab = (tab) => {
+            ['Dash', 'Conferencia', 'Fiscal', 'Logs'].forEach(t => {
+                document.getElementById(`aba-${t.toLowerCase()}`)?.classList.add('hidden');
+                document.getElementById(`btnAba${t}`).classList.remove('tab-active');
+            });
+            document.getElementById(`aba-${tab.toLowerCase()}`).classList.remove('hidden');
+            document.getElementById(`btnAba${tab}`).classList.add('tab-active');
+        };
+
+        // IMPORTAÇÃO XML COM CORREÇÃO DE ATUALIZAÇÃO
+        document.getElementById('xml-input').onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(ev.target.result, "text/xml");
+                const nNF = xml.getElementsByTagName("nNF")[0]?.textContent;
+                const forn = xml.getElementsByTagName("xNome")[0]?.textContent.toUpperCase();
+                const lote = "L" + Date.now().toString().slice(-5);
+                let itens = xml.getElementsByTagName("det");
+                
+                const promises = [];
+                for (let i = 0; i < itens.length; i++) {
+                    promises.push(addDoc(collection(db, "recebimentos"), {
+                        lote, nf: nNF, fornecedor: forn,
+                        produto: (itens[i].getElementsByTagName("xProd")[0]?.textContent).toUpperCase(),
+                        qtdEsperada: parseFloat(itens[i].getElementsByTagName("qCom")[0]?.textContent),
+                        status: "PENDENTE", data: serverTimestamp(), qtdContada: 0, tentativas: 0
+                    }));
+                }
+                
+                try {
+                    await Promise.all(promises);
+                    await registrarLog("IMPORT_XML", `NF ${nNF} enviada para conferência.`);
+                    e.target.value = ""; // Limpa o input para permitir re-upload se necessário
+                    switchTab('Conferencia'); // Muda a aba para garantir que o DOM renderize os novos cards
+                    alert("Nota importada! Os produtos já estão na lista.");
+                } catch (err) {
+                    alert("Erro ao importar: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        let activeItem = null;
+        window.abrirModal = async (id, prod, esp, nf, forn) => {
+            const snap = await getDoc(doc(db, "recebimentos", id));
+            activeItem = { id, prod, esp, nf, forn, ...snap.data() };
+            document.getElementById('modal-prod-nome').innerText = prod;
+            document.getElementById('input-qtd').value = "";
+            document.getElementById('modal-conferencia').classList.remove('hidden');
+        };
+
+        window.fecharModal = () => document.getElementById('modal-conferencia').classList.add('hidden');
+
+        document.getElementById('btnConfirmar').onclick = async () => {
+            const qtd = parseFloat(document.getElementById('input-qtd').value);
+            const val = document.getElementById('input-validade').value;
+            if (isNaN(qtd) || !val) return alert("Erro: Preencha todos os campos.");
+
+            const ref = doc(db, "recebimentos", activeItem.id);
+            const novaTentativa = (activeItem.tentativas || 0) + 1;
+
+            if (currentUserRole === "admin" || qtd === activeItem.qtdEsperada) {
+                await updateDoc(ref, { status: "SUCESSO", qtdContada: qtd, validade: val, tentativas: novaTentativa });
+                await addDoc(collection(db, "estoque_geral"), { produto: activeItem.produto, saldo: qtd, validade: val, fornecedor: activeItem.fornecedor });
+                registrarLog("APROVADO", `${activeItem.produto} finalizado.`);
+                fecharModal();
+            } else {
+                if (novaTentativa >= 2 && currentUserRole !== "admin") {
+                    await updateDoc(ref, { status: "BLOQUEADO_AUDITORIA", qtdContada: qtd, validade: val, tentativas: novaTentativa });
+                    alert("BLOQUEADO! O item excedeu 2 tentativas e foi para auditoria.");
+                } else {
+                    await updateDoc(ref, { status: "RECONTAGEM", qtdContada: qtd, validade: val, tentativas: novaTentativa });
+                    alert("DIVERGÊNCIA! Recontagem necessária (Tentativa " + novaTentativa + "/2).");
+                }
+                registrarLog("DIVERGENCIA", `Erro: ${activeItem.produto} (${novaTentativa}ª tent.)`);
+                fecharModal();
+            }
+        };
+
+        function monitorarLogs() {
+            onSnapshot(query(collection(db, "logs"), orderBy("data", "desc")), (snap) => {
+                const list = document.getElementById('list-logs'); list.innerHTML = "";
+                snap.forEach(d => {
+                    const l = d.data();
+                    list.innerHTML += `<div>[${l.data?.toDate().toLocaleString() || '...'}] ${l.usuario}: ${l.acao} - ${l.detalhes}</div>`;
+                });
+            });
+        }
+    </script>
+</body>
+</html>

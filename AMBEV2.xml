@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe>
+      <ide>
+        <nNF>55080</nNF>
+      </ide>
+      
+      <emit>
+        <CNPJ>00394460005139</CNPJ>
+        <xNome>AMBEV S.A. DISTRIBUIDORA BRASILIA</xNome>
+      </emit>
+
+      <det nItem="1">
+        <prod>
+          <cProd>12345</cProd>
+          <xProd>CERVEJA SPATEN LATA 350ML</xProd>
+          <qCom>120.0000</qCom>
+          <uCom>UN</uCom>
+        </prod>
+      </det>
+      
+      <det nItem="2">
+        <prod>
+          <cProd>67890</cProd>
+          <xProd>REFRIGERANTE GUARANA ANTARCTICA 2L</xProd>
+          <qCom>48.0000</qCom>
+          <uCom>UN</uCom>
+        </prod>
+      </det>
+
+      <det nItem="3">
+        <prod>
+          <cProd>55443</cProd>
+          <xProd>AGUA MINERAL AMA SEM GAS 500ML</xProd> 
+          <qCom>200.0000</qCom>
+          <uCom>UN</uCom>
+        </prod>
+      </det>
+    </infNFe>
+  </NFe>
+</nfeProc>
