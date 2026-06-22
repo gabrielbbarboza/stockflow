@@ -8,10 +8,7 @@ import {
 
 import { db } from "../config/firebase.js";
 
-/**
- * Inicia listener em tempo real no estoque geral.
- * @param {Function} callback - Recebe o snapshot do Firestore
- */
+
 export function monitorarEstoque(callback) {
     return onSnapshot(collection(db, "estoque_geral"), callback);
 }
