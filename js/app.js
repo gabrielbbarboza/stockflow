@@ -11,7 +11,6 @@ import { iniciarConferencia, configurarImportacaoXML, confirmarConferencia }
 import "./ui/tabs.js";
 import "./ui/modalUsuarios.js";
 
-// ── Auth: Login / Logout ─────────────────────
 
 document.getElementById('btnLogin').onclick = () =>
     login(
@@ -21,22 +20,18 @@ document.getElementById('btnLogin').onclick = () =>
 
 document.getElementById('btnLogout').onclick = () => logout();
 
-// ── Auth: Observer ───────────────────────────
 
 observeAuth(
-    // Usuário autenticado
     (user, role) => {
         document.getElementById('user-display').innerText = user.email;
         document.getElementById('auth-screen').classList.add('hidden');
         document.getElementById('app-content').classList.remove('hidden');
         document.getElementById('nav-abas').classList.remove('hidden');
 
-        // Funcionalidades exclusivas de admin
         document.getElementById('box-import-xml').classList.toggle('hidden', role !== "admin");
         document.getElementById('btnAbaLogs').classList.toggle('hidden', role !== "admin");
         document.getElementById('btnGerenciarUsuarios').classList.toggle('hidden', role !== "admin");
 
-        // Inicia módulos
         iniciarDashboard();
         iniciarConferencia();
         configurarImportacaoXML();
@@ -45,7 +40,6 @@ observeAuth(
             monitorarLogs(document.getElementById('list-logs'));
         }
     },
-    // Usuário deslogado
     () => {
         document.getElementById('auth-screen').classList.remove('hidden');
         document.getElementById('app-content').classList.add('hidden');
