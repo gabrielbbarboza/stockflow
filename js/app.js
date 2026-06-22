@@ -47,6 +47,5 @@ observeAuth(
     }
 );
 
-// ── Modal Conferência: botão Gravar ──────────
 
 document.getElementById('btnConfirmar').onclick = confirmarConferencia;
